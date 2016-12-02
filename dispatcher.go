@@ -98,11 +98,32 @@ func NewDispatcher(cfg Config) Dispatcher {
 		panic("a service name is required")
 	}
 
+	// Collect all unique transports from inbounds and outbounds.
+	transports := make(map[transport.Transport]struct{})
+	for _, inbound := range cfg.Inbounds {
+		for _, transport := range inbound.Transports() {
+			transports[transport] = struct{}{}
+		}
+	}
+	for _, outbound := range cfg.Outbounds {
+		if unary := outbound.Unary; unary != nil {
+			for _, transport := range unary.Transports() {
+				transports[transport] = struct{}{}
+			}
+		}
+		if oneway := outbound.Oneway; oneway != nil {
+			for _, transport := range oneway.Transports() {
+				transports[transport] = struct{}{}
+			}
+		}
+	}
+
 	return dispatcher{
 		Name:              cfg.Name,
 		Registrar:         transport.NewMapRegistry(cfg.Name),
 		inbounds:          cfg.Inbounds,
 		outbounds:         convertOutbounds(cfg.Outbounds, cfg.OutboundMiddleware),
+		transports:        transports,
 		InboundMiddleware: cfg.InboundMiddleware,
 	}
 }
@@ -146,8 +167,9 @@ type dispatcher struct {
 
 	Name string
 
-	inbounds  Inbounds
-	outbounds Outbounds
+	inbounds   Inbounds
+	outbounds  Outbounds
+	transports map[transport.Transport]struct{}
 
 	InboundMiddleware InboundMiddleware
 }
@@ -167,9 +189,10 @@ func (d dispatcher) ClientConfig(service string) transport.ClientConfig {
 
 func (d dispatcher) Start() error {
 	var (
-		mu               sync.Mutex
-		startedInbounds  []transport.Inbound
-		startedOutbounds []transport.Outbound
+		mu                sync.Mutex
+		startedTransports []transport.Transport
+		startedInbounds   []transport.Inbound
+		startedOutbounds  []transport.Outbound
 	)
 
 	startInbound := func(i transport.Inbound) func() error {
@@ -202,6 +225,19 @@ func (d dispatcher) Start() error {
 		}
 	}
 
+	startTransport := func(t transport.Transport) func() error {
+		return func() error {
+			if err := t.Start(); err != nil {
+				return err
+			}
+
+			mu.Lock()
+			startedTransports = append(startedTransports, t)
+			mu.Unlock()
+			return nil
+		}
+	}
+
 	var wait intsync.ErrorWaiter
 	for _, i := range d.inbounds {
 		i.SetRegistry(d)
@@ -212,6 +248,10 @@ func (d dispatcher) Start() error {
 	for _, o := range d.outbounds {
 		wait.Submit(startOutbound(o.Unary))
 		wait.Submit(startOutbound(o.Oneway))
+	}
+
+	for t := range d.transports {
+		wait.Submit(startTransport(t))
 	}
 
 	errs := wait.Wait()
@@ -226,6 +266,9 @@ func (d dispatcher) Start() error {
 	}
 	for _, o := range startedOutbounds {
 		wait.Submit(o.Stop)
+	}
+	for _, t := range startedTransports {
+		wait.Submit(t.Stop)
 	}
 
 	if newErrors := wait.Wait(); len(newErrors) > 0 {
@@ -272,6 +315,10 @@ func (d dispatcher) Stop() error {
 		if o.Oneway != nil {
 			wait.Submit(o.Oneway.Stop)
 		}
+	}
+
+	for t := range d.transports {
+		wait.Submit(t.Stop)
 	}
 
 	if errs := wait.Wait(); len(errs) > 0 {

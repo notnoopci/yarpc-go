@@ -20,7 +20,9 @@
 
 package transport
 
-import "context"
+import (
+	"context"
+)
 
 // UnaryOutboundMiddleware defines transport-level middleware for
 // `UnaryOutbound`s.
@@ -68,6 +70,10 @@ func (f UnaryOutboundMiddlewareFunc) Call(ctx context.Context, request *Request,
 type unaryOutboundWithMiddleware struct {
 	o UnaryOutbound
 	f UnaryOutboundMiddleware
+}
+
+func (fo unaryOutboundWithMiddleware) Transports() []Transport {
+	return fo.o.Transports()
 }
 
 func (fo unaryOutboundWithMiddleware) Start() error {
@@ -133,6 +139,10 @@ func (f OnewayOutboundMiddlewareFunc) CallOneway(ctx context.Context, request *R
 type onewayOutboundWithMiddleware struct {
 	o OnewayOutbound
 	f OnewayOutboundMiddleware
+}
+
+func (fo onewayOutboundWithMiddleware) Transports() []Transport {
+	return fo.o.Transports()
 }
 
 func (fo onewayOutboundWithMiddleware) Start() error {

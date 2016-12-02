@@ -79,6 +79,11 @@ func (i *Inbound) SetRegistry(registry transport.Registry) {
 	i.registry = registry
 }
 
+// Transports returns the inbound's HTTP transport.
+func (i *Inbound) Transports() []transport.Transport {
+	return []transport.Transport{}
+}
+
 // Start starts the inbound with a given service detail, opening a listening
 // socket.
 func (i *Inbound) Start() error {

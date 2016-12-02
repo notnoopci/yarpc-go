@@ -84,6 +84,11 @@ func (i *Inbound) Channel() Channel {
 	return i.ch
 }
 
+// Transports returns the underlying Transport for this Inbound.
+func (i *Inbound) Transports() []transport.Transport {
+	return []transport.Transport{}
+}
+
 // Start starts the TChannel inbound transport. This immediately opens a listen
 // socket.
 func (i *Inbound) Start() error {
