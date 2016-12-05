@@ -20,9 +20,7 @@
 
 package transport
 
-import (
-	"context"
-)
+import "context"
 
 // UnaryOutboundMiddleware defines transport-level middleware for
 // `UnaryOutbound`s.
