@@ -242,7 +242,6 @@ func (d dispatcher) Start() error {
 				return err
 			}
 
-			// TODO resolve lock race here
 			mu.Lock()
 			startedTransports = append(startedTransports, t)
 			mu.Unlock()
