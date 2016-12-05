@@ -104,6 +104,7 @@ func (o *Outbound) WithTracer(tracer opentracing.Tracer) *Outbound {
 
 // Transports returns the outbound's HTTP transport.
 func (o *Outbound) Transports() []transport.Transport {
+	// TODO factor out transport and return it here.
 	return []transport.Transport{}
 }
 

@@ -69,6 +69,7 @@ func (o *Outbound) WithTracer(tracer opentracing.Tracer) *Outbound {
 
 // Transports returns the underlying TChannel Transport for this outbound.
 func (o *Outbound) Transports() []transport.Transport {
+	// TODO factor out transport and return it here.
 	return []transport.Transport{}
 }
 

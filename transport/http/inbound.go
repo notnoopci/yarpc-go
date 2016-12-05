@@ -81,6 +81,7 @@ func (i *Inbound) SetRegistry(registry transport.Registry) {
 
 // Transports returns the inbound's HTTP transport.
 func (i *Inbound) Transports() []transport.Transport {
+	// TODO factor out transport and return it here.
 	return []transport.Transport{}
 }
 

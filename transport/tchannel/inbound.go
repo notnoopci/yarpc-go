@@ -86,6 +86,7 @@ func (i *Inbound) Channel() Channel {
 
 // Transports returns the underlying Transport for this Inbound.
 func (i *Inbound) Transports() []transport.Transport {
+	// TODO factor out transport and return it here.
 	return []transport.Transport{}
 }
 
