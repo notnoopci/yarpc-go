@@ -98,32 +98,12 @@ func NewDispatcher(cfg Config) Dispatcher {
 		panic("a service name is required")
 	}
 
-	// Collect all unique transports from inbounds and outbounds.
-	transports := make(map[transport.Transport]struct{})
-	for _, inbound := range cfg.Inbounds {
-		for _, transport := range inbound.Transports() {
-			transports[transport] = struct{}{}
-		}
-	}
-	for _, outbound := range cfg.Outbounds {
-		if unary := outbound.Unary; unary != nil {
-			for _, transport := range unary.Transports() {
-				transports[transport] = struct{}{}
-			}
-		}
-		if oneway := outbound.Oneway; oneway != nil {
-			for _, transport := range oneway.Transports() {
-				transports[transport] = struct{}{}
-			}
-		}
-	}
-
 	return dispatcher{
 		Name:              cfg.Name,
 		Registrar:         transport.NewMapRegistry(cfg.Name),
 		inbounds:          cfg.Inbounds,
 		outbounds:         convertOutbounds(cfg.Outbounds, cfg.OutboundMiddleware),
-		transports:        transports,
+		transports:        collectTransports(cfg.Inbounds, cfg.Outbounds),
 		InboundMiddleware: cfg.InboundMiddleware,
 	}
 }
@@ -159,6 +139,37 @@ func convertOutbounds(outbounds Outbounds, middleware OutboundMiddleware) Outbou
 	return convertedOutbounds
 }
 
+// collectTransports iterates over all inbounds and outbounds and collects all
+// of their unique underlying transports. Multiple inbounds and outbounds may
+// share a transport, and we only want the dispatcher to manage their lifecycle
+// once.
+func collectTransports(inbounds Inbounds, outbounds Outbounds) []transport.Transport {
+	// Collect all unique transports from inbounds and outbounds.
+	transports := make(map[transport.Transport]struct{})
+	for _, inbound := range inbounds {
+		for _, transport := range inbound.Transports() {
+			transports[transport] = struct{}{}
+		}
+	}
+	for _, outbound := range outbounds {
+		if unary := outbound.Unary; unary != nil {
+			for _, transport := range unary.Transports() {
+				transports[transport] = struct{}{}
+			}
+		}
+		if oneway := outbound.Oneway; oneway != nil {
+			for _, transport := range oneway.Transports() {
+				transports[transport] = struct{}{}
+			}
+		}
+	}
+	keys := make([]transport.Transport, len(transports))
+	for key := range transports {
+		keys = append(keys, key)
+	}
+	return keys
+}
+
 // dispatcher is the standard RPC implementation.
 //
 // It allows use of multiple Inbounds and Outbounds together.
@@ -169,7 +180,7 @@ type dispatcher struct {
 
 	inbounds   Inbounds
 	outbounds  Outbounds
-	transports map[transport.Transport]struct{}
+	transports []transport.Transport
 
 	InboundMiddleware InboundMiddleware
 }
@@ -231,6 +242,7 @@ func (d dispatcher) Start() error {
 				return err
 			}
 
+			// TODO resolve lock race here
 			mu.Lock()
 			startedTransports = append(startedTransports, t)
 			mu.Unlock()
@@ -280,7 +292,7 @@ func (d dispatcher) Start() error {
 
 	// Start transports
 	wait = intsync.ErrorWaiter{}
-	for t := range d.transports {
+	for _, t := range d.transports {
 		wait.Submit(startTransport(t))
 	}
 
@@ -332,7 +344,7 @@ func (d dispatcher) Stop() error {
 		}
 	}
 
-	for t := range d.transports {
+	for _, t := range d.transports {
 		wait.Submit(t.Stop)
 	}
 
