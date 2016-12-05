@@ -238,6 +238,28 @@ func (d dispatcher) Start() error {
 		}
 	}
 
+	abort := func(errs []error) error {
+		// Failed to start so stop everything that was started.
+		wait := intsync.ErrorWaiter{}
+		for _, i := range startedInbounds {
+			wait.Submit(i.Stop)
+		}
+		for _, o := range startedOutbounds {
+			wait.Submit(o.Stop)
+		}
+		for _, t := range startedTransports {
+			wait.Submit(t.Stop)
+		}
+
+		if newErrors := wait.Wait(); len(newErrors) > 0 {
+			errs = append(errs, newErrors...)
+		}
+
+		return errors.ErrorGroup(errs)
+	}
+
+	// Start inbounds and outbounds in parallel
+
 	var wait intsync.ErrorWaiter
 	for _, i := range d.inbounds {
 		i.SetRegistry(d)
@@ -250,32 +272,25 @@ func (d dispatcher) Start() error {
 		wait.Submit(startOutbound(o.Oneway))
 	}
 
+	// Synchronize
+	errs := wait.Wait()
+	if len(errs) != 0 {
+		return abort(errs)
+	}
+
+	// Start transports
+	wait = intsync.ErrorWaiter{}
 	for t := range d.transports {
 		wait.Submit(startTransport(t))
 	}
 
-	errs := wait.Wait()
-	if len(errs) == 0 {
-		return nil
+	// Synchronize
+	errs = wait.Wait()
+	if len(errs) != 0 {
+		return abort(errs)
 	}
 
-	// Failed to start so stop everything that was started.
-	wait = intsync.ErrorWaiter{}
-	for _, i := range startedInbounds {
-		wait.Submit(i.Stop)
-	}
-	for _, o := range startedOutbounds {
-		wait.Submit(o.Stop)
-	}
-	for _, t := range startedTransports {
-		wait.Submit(t.Stop)
-	}
-
-	if newErrors := wait.Wait(); len(newErrors) > 0 {
-		errs = append(errs, newErrors...)
-	}
-
-	return errors.ErrorGroup(errs)
+	return nil
 }
 
 func (d dispatcher) Register(rs []transport.Registrant) {
