@@ -163,7 +163,7 @@ func collectTransports(inbounds Inbounds, outbounds Outbounds) []transport.Trans
 			}
 		}
 	}
-	keys := make([]transport.Transport, len(transports))
+	keys := make([]transport.Transport, 0, len(transports))
 	for key := range transports {
 		keys = append(keys, key)
 	}
