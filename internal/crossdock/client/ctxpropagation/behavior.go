@@ -324,14 +324,11 @@ func buildDispatcher(t crossdock.T) (dispatcher yarpc.Dispatcher, tconfig server
 	ch, err := tchannel.NewChannel("ctxclient", nil)
 	fatals.NoError(err, "failed to create TChannel")
 
-	var httpTransport *http.Transport
+	httpTransport := http.NewTransport()
 
 	var outbound transport.UnaryOutbound
 	switch trans := t.Param(params.Transport); trans {
 	case "http":
-		if httpTransport == nil {
-			httpTransport = http.NewTransport()
-		}
 		outbound = http.NewOutbound(
 			single.New(
 				hostport.PeerIdentifier(fmt.Sprintf("%s:8081", subject)),
