@@ -21,8 +21,6 @@
 package tchannel
 
 import (
-	"net"
-
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
 
@@ -44,7 +42,6 @@ func NewInbound(ch Channel) *Inbound {
 type Inbound struct {
 	ch       Channel
 	addr     string
-	listener net.Listener
 	registry transport.Registry
 	tracer   opentracing.Tracer
 }
