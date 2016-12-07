@@ -131,7 +131,8 @@ func (tt tchannelTransport) WithRegistry(r transport.Registry, f func(transport.
 	serverOpts := testutils.NewOpts().SetServiceName(testService)
 	clientOpts := testutils.NewOpts().SetServiceName(testCaller)
 	testutils.WithServer(tt.t, serverOpts, func(ch *tchannel.Channel, hostPort string) {
-		i := tch.NewInbound(ch)
+		x := tch.NewChannelTransport(tch.WithChannel(ch))
+		i := x.NewInbound()
 		i.SetRegistry(r)
 		require.NoError(tt.t, i.Start(), "failed to start")
 

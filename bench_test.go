@@ -187,12 +187,12 @@ func Benchmark_HTTP_NetHTTPToNetHTTP(b *testing.B) {
 }
 
 func Benchmark_TChannel_YARPCToYARPC(b *testing.B) {
-	serverCh, err := tchannel.NewChannel("server", nil)
-	require.NoError(b, err, "failed to build server TChannel")
-
+	tchannelTransport := ytchannel.NewChannelTransport(
+		ytchannel.WithServiceName("server"),
+	)
 	serverCfg := yarpc.Config{
 		Name:     "server",
-		Inbounds: yarpc.Inbounds{ytchannel.NewInbound(serverCh)},
+		Inbounds: yarpc.Inbounds{tchannelTransport.NewInbound()},
 	}
 
 	clientCh, err := tchannel.NewChannel("client", nil)
@@ -209,7 +209,7 @@ func Benchmark_TChannel_YARPCToYARPC(b *testing.B) {
 			Outbounds: yarpc.Outbounds{
 				"server": {
 					Unary: ytchannel.NewOutbound(clientCh).
-						WithHostPort(serverCh.PeerInfo().HostPort),
+						WithHostPort(tchannelTransport.ListenAddr()),
 				},
 			},
 		}
@@ -248,23 +248,24 @@ func Benchmark_TChannel_YARPCToTChannel(b *testing.B) {
 }
 
 func Benchmark_TChannel_TChannelToYARPC(b *testing.B) {
-	serverCh, err := tchannel.NewChannel("server", nil)
-	require.NoError(b, err, "failed to build server TChannel")
+	tchannelTransport := ytchannel.NewChannelTransport(
+		ytchannel.WithServiceName("server"),
+	)
 
 	serverCfg := yarpc.Config{
 		Name:     "server",
-		Inbounds: yarpc.Inbounds{ytchannel.NewInbound(serverCh)},
+		Inbounds: yarpc.Inbounds{tchannelTransport.NewInbound()},
 	}
 
-	withDispatcher(b, serverCfg, func(server yarpc.Dispatcher) {
-		server.Register(raw.Procedure("echo", yarpcEcho))
+	withDispatcher(b, serverCfg, func(dispatcher yarpc.Dispatcher) {
+		dispatcher.Register(raw.Procedure("echo", yarpcEcho))
 
 		clientCh, err := tchannel.NewChannel("client", nil)
 		require.NoError(b, err, "failed to build client TChannel")
 		defer clientCh.Close()
 
 		b.ResetTimer()
-		runTChannelClient(b, clientCh, serverCh.PeerInfo().HostPort)
+		runTChannelClient(b, clientCh, tchannelTransport.ListenAddr())
 	})
 }
 
