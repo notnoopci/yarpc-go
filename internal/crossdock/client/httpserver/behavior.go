@@ -47,7 +47,7 @@ func Run(t crossdock.T) {
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"yarpc-test": {
-				Unary: httpTransport.NewSingleOutbound(fmt.Sprintf("%s:8085", server)),
+				Unary: httpTransport.NewSingleOutbound(fmt.Sprintf("http://%s:8085", server)),
 			},
 		},
 	})

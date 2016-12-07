@@ -46,7 +46,7 @@ func Create(t crossdock.T) yarpc.Dispatcher {
 	trans := t.Param(params.Transport)
 	switch trans {
 	case "http":
-		unaryOutbound = httpTransport.NewSingleOutbound(fmt.Sprintf("%s:8081", server))
+		unaryOutbound = httpTransport.NewSingleOutbound(fmt.Sprintf("http://%s:8081", server))
 	case "tchannel":
 		ch, err := tchannel.NewChannel("client", nil)
 		fatals.NoError(err, "couldn't create tchannel")

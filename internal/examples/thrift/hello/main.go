@@ -45,7 +45,7 @@ func main() {
 		},
 		Outbounds: yarpc.Outbounds{
 			"hello": {
-				Unary: httpTransport.NewSingleOutbound("127.0.0.1:8086"),
+				Unary: httpTransport.NewSingleOutbound("http://127.0.0.1:8086"),
 			},
 		},
 	})

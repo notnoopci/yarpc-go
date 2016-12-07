@@ -3,6 +3,7 @@ package recorder
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -165,7 +166,7 @@ func withDisconnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"server": {
-				Unary: httpTransport.NewSingleOutbound("127.0.0.1:65535"),
+				Unary: httpTransport.NewSingleOutbound("http://127.0.0.1:65535"),
 			},
 		},
 		OutboundMiddleware: yarpc.OutboundMiddleware{
@@ -199,7 +200,7 @@ func withConnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"server": {
-				Unary: httpTransport.NewSingleOutbound(serverHTTP.Addr().String()),
+				Unary: httpTransport.NewSingleOutbound(fmt.Sprintf("http://%s", serverHTTP.Addr())),
 			},
 		},
 		OutboundMiddleware: yarpc.OutboundMiddleware{

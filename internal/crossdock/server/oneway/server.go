@@ -37,7 +37,7 @@ var dispatcher yarpc.Dispatcher
 func Start() {
 	httpTransport := http.NewTransport()
 	h := onewayHandler{
-		Outbound: httpTransport.NewSingleOutbound("127.0.0.1:8089"),
+		Outbound: httpTransport.NewSingleOutbound("http://127.0.0.1:8089"),
 	}
 
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{

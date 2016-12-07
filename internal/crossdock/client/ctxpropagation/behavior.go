@@ -327,7 +327,7 @@ func buildDispatcher(t crossdock.T) (dispatcher yarpc.Dispatcher, tconfig server
 	var outbound transport.UnaryOutbound
 	switch trans := t.Param(params.Transport); trans {
 	case "http":
-		outbound = httpTransport.NewSingleOutbound(fmt.Sprintf("%s:8081", subject))
+		outbound = httpTransport.NewSingleOutbound(fmt.Sprintf("http://%s:8081", subject))
 		tconfig.TChannel = &server.TChannelTransport{Host: self, Port: 8087}
 	case "tchannel":
 		outbound = tch.NewOutbound(ch).WithHostPort(fmt.Sprintf("%s:8082", subject))

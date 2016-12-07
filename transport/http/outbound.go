@@ -67,8 +67,13 @@ func (t *Transport) NewOutbound(chooser peer.Chooser) *Outbound {
 // NewSingleOutbound builds a new HTTP outbound to a single peer by address.
 // Behind the scenes, this assembles a single peer chooser that connects this
 // very transport to retain that peer.
-func (t *Transport) NewSingleOutbound(addr string) *Outbound {
-	return t.NewOutbound(single.New(hostport.PeerIdentifier(addr), t))
+func (t *Transport) NewSingleOutbound(URL string) *Outbound {
+	parsedURL, err := url.Parse(URL)
+	if err != nil {
+		panic(err.Error())
+	}
+	return t.NewOutbound(single.New(hostport.PeerIdentifier(parsedURL.Host), t)).
+		WithURLTemplate(URL)
 }
 
 // NewOutbound builds a new HTTP outbound built around a peer.Chooser
@@ -84,7 +89,8 @@ func NewOutbound(chooser peer.Chooser) *Outbound {
 	}
 }
 
-// NewSingleOutbound creates an outbound from a single URL.
+// NewSingleOutbound creates an outbound from a single URL (a peer host:port is
+// not sufficient).
 // This form defers to the underlying HTTP agent's peer selection and load
 // balancing, using DNS.
 func NewSingleOutbound(u string, t *Transport) *Outbound {
