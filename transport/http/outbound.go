@@ -64,18 +64,6 @@ func (t *Transport) NewOutbound(chooser peer.Chooser) *Outbound {
 	}
 }
 
-// NewSingleOutbound builds a new HTTP outbound to a single peer by address.
-// Behind the scenes, this assembles a single peer chooser that connects this
-// very transport to retain that peer.
-func (t *Transport) NewSingleOutbound(URL string) *Outbound {
-	parsedURL, err := url.Parse(URL)
-	if err != nil {
-		panic(err.Error())
-	}
-	return t.NewOutbound(single.New(hostport.PeerIdentifier(parsedURL.Host), t)).
-		WithURLTemplate(URL)
-}
-
 // NewOutbound builds a new HTTP outbound built around a peer.Chooser
 // for getting potential downstream hosts.
 // Chooser.Choose MUST return *hostport.Peer objects.
@@ -89,17 +77,17 @@ func NewOutbound(chooser peer.Chooser) *Outbound {
 	}
 }
 
-// NewSingleOutbound creates an outbound from a single URL (a peer host:port is
+// NewSingleOutbound creates an outbound from a single URL (a bare host:port is
 // not sufficient).
 // This form defers to the underlying HTTP agent's peer selection and load
 // balancing, using DNS.
-func NewSingleOutbound(u string, t *Transport) *Outbound {
-	parsedURL, err := url.Parse(u)
+func (t *Transport) NewSingleOutbound(URL string) *Outbound {
+	parsedURL, err := url.Parse(URL)
 	if err != nil {
 		panic(err.Error())
 	}
-	return NewOutbound(single.New(hostport.PeerIdentifier(parsedURL.Host), t)).
-		WithURLTemplate(u)
+	return t.NewOutbound(single.New(hostport.PeerIdentifier(parsedURL.Host), t)).
+		WithURLTemplate(URL)
 }
 
 // Outbound is an HTTP UnaryOutbound and OnewayOutbound
