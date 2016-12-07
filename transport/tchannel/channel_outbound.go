@@ -1,79 +1,55 @@
-// Copyright (c) 2016 Uber Technologies, Inc.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-
 package tchannel
 
 import (
-	"context"
+	"io"
 
+	"github.com/uber/tchannel-go"
+	"go.uber.org/atomic"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
-
-	"github.com/opentracing/opentracing-go"
-	"github.com/uber/tchannel-go"
-	"go.uber.org/atomic"
+	"golang.org/x/net/context"
 )
 
-var errOutboundNotStarted = errors.ErrOutboundNotStarted("tchannel.Outbound")
-
-// NewOutbound builds a new TChannel outbound which uses the given Channel to
-// make requests.
-func NewOutbound(ch Channel) *Outbound {
-	return &Outbound{channel: ch, started: atomic.NewBool(false)}
+// NewOutbound builds a new TChannel outbound using the transport's shared
+// channel to make requests to any connected peer.
+func (t *ChannelTransport) NewOutbound() *ChannelOutbound {
+	return &ChannelOutbound{
+		started:   atomic.NewBool(false),
+		channel:   t.ch,
+		transport: t,
+	}
 }
 
-// Outbound is a TChannel outbound transport.
-type Outbound struct {
-	started *atomic.Bool
-	channel Channel
+// NewSingleOutbound builds a new TChannel outbound using the transport's shared
+// channel to a specific peer.
+func (t *ChannelTransport) NewSingleOutbound(addr string) *ChannelOutbound {
+	return &ChannelOutbound{
+		started:   atomic.NewBool(false),
+		channel:   t.ch,
+		transport: t,
+		addr:      addr,
+	}
+}
 
-	// If specified, this is the address to which the request will be made.
+// ChannelOutbound is an outbound transport using a shared TChannel.
+type ChannelOutbound struct {
+	started   *atomic.Bool
+	channel   Channel
+	transport *ChannelTransport
+
+	// If specified, this is the address to which requests will be made.
 	// Otherwise, the global peer list of the Channel will be used.
-	HostPort string
-}
-
-// WithHostPort specifies that the requests made by this outbound should be to
-// the given address.
-//
-// By default, if HostPort was not specified, the Outbound will use the
-// TChannel global peer list.
-func (o *Outbound) WithHostPort(hostPort string) *Outbound {
-	o.HostPort = hostPort
-	return o
-}
-
-// WithTracer configures a tracer for this outbound.
-func (o *Outbound) WithTracer(tracer opentracing.Tracer) *Outbound {
-	// At this time, we delegate tracing responsibility to the underlying TChannel.
-	return o
+	addr string
 }
 
 // Transports returns the underlying TChannel Transport for this outbound.
-func (o *Outbound) Transports() []transport.Transport {
-	// TODO factor out transport and return it here.
-	return []transport.Transport{}
+func (o *ChannelOutbound) Transports() []transport.Transport {
+	return []transport.Transport{o.transport}
 }
 
 // Start starts the TChannel outbound.
-func (o *Outbound) Start() error {
+func (o *ChannelOutbound) Start() error {
 	// TODO: Should we create the connection to HostPort (if specified) here or
 	// wait for the first call?
 	o.started.Swap(true)
@@ -81,7 +57,7 @@ func (o *Outbound) Start() error {
 }
 
 // Stop stops the TChannel outbound.
-func (o *Outbound) Stop() error {
+func (o *ChannelOutbound) Stop() error {
 	if o.started.Swap(false) {
 		o.channel.Close()
 	}
@@ -89,7 +65,7 @@ func (o *Outbound) Stop() error {
 }
 
 // Call sends an RPC over this TChannel outbound.
-func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	if !o.started.Load() {
 		// panic because there's no recovery from this
 		panic(errOutboundNotStarted)
@@ -108,7 +84,7 @@ func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport
 		RoutingKey:      req.RoutingKey,
 		RoutingDelegate: req.RoutingDelegate,
 	}
-	if o.HostPort != "" {
+	if o.addr != "" {
 		// If the hostport is given, we use the BeginCall on the channel
 		// instead of the subchannel.
 		call, err = o.channel.BeginCall(
@@ -117,7 +93,7 @@ func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport
 			// (kris): Consider instead moving TimeoutPerAttempt to an outer
 			// layer, just clamp the context on outbound call.
 			ctx,
-			o.HostPort,
+			o.addr,
 			req.Service,
 			req.Procedure,
 			&callOptions,
@@ -169,4 +145,28 @@ func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport
 	}
 
 	return &transport.Response{Headers: headers, Body: resBody}, nil
+}
+
+func writeBody(body io.Reader, call *tchannel.OutboundCall) error {
+	w, err := call.Arg3Writer()
+	if err != nil {
+		return err
+	}
+
+	if _, err := io.Copy(w, body); err != nil {
+		return err
+	}
+
+	return w.Close()
+}
+
+func fromSystemError(err tchannel.SystemError) error {
+	switch err.Code() {
+	case tchannel.ErrCodeCancelled, tchannel.ErrCodeBusy, tchannel.ErrCodeBadRequest:
+		return errors.RemoteBadRequestError(err.Message())
+	case tchannel.ErrCodeTimeout:
+		return errors.RemoteTimeoutError(err.Message())
+	default:
+		return errors.RemoteUnexpectedError(err.Message())
+	}
 }
