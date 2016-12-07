@@ -1,6 +1,7 @@
 package tchannel
 
 import (
+	"context"
 	"io"
 
 	"github.com/uber/tchannel-go"
@@ -8,7 +9,6 @@ import (
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
-	"golang.org/x/net/context"
 )
 
 // NewOutbound builds a new TChannel outbound using the transport's shared
