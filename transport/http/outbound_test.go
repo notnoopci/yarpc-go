@@ -232,14 +232,7 @@ func TestStartMultiple(t *testing.T) {
 
 func TestStopMultiple(t *testing.T) {
 	httpTransport := NewTransport()
-	// TODO transport lifecycle
-
-	out := NewOutbound(
-		single.New(
-			hostport.PeerIdentifier("127.0.0.1:9999"),
-			httpTransport,
-		),
-	)
+	out := httpTransport.NewSingleOutbound("http://127.0.0.1:9999")
 
 	err := out.Start()
 	require.NoError(t, err)
@@ -263,14 +256,7 @@ func TestStopMultiple(t *testing.T) {
 
 func TestCallWithoutStarting(t *testing.T) {
 	httpTransport := NewTransport()
-	// TODO transport lifecycle
-
-	out := NewOutbound(
-		single.New(
-			hostport.PeerIdentifier("127.0.0.1:9999"),
-			httpTransport,
-		),
-	)
+	out := httpTransport.NewSingleOutbound("http://127.0.0.1:9999")
 	assert.Panics(t, func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		defer cancel()
