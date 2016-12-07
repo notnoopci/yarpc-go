@@ -45,10 +45,12 @@ import (
 )
 
 func TestStartAddrInUse(t *testing.T) {
-	i1 := NewInbound(":0")
+	t1 := NewTransport()
+	i1 := t1.NewInbound(":0")
 	i1.SetRegistry(new(transporttest.MockRegistry))
 	require.NoError(t, i1.Start(), "inbound 1 must start without an error")
-	i2 := NewInbound(i1.Addr().String())
+	t2 := NewTransport()
+	i2 := t2.NewInbound(i1.Addr().String())
 	i2.SetRegistry(new(transporttest.MockRegistry))
 	err := i2.Start()
 
@@ -64,7 +66,8 @@ func TestStartAddrInUse(t *testing.T) {
 }
 
 func TestNilAddrAfterStop(t *testing.T) {
-	i := NewInbound(":0")
+	x := NewTransport()
+	i := x.NewInbound(":0")
 	i.SetRegistry(new(transporttest.MockRegistry))
 	require.NoError(t, i.Start())
 	assert.NotEqual(t, ":0", i.Addr().String())
@@ -74,7 +77,8 @@ func TestNilAddrAfterStop(t *testing.T) {
 }
 
 func TestInboundStartAndStop(t *testing.T) {
-	i := NewInbound(":0")
+	x := NewTransport()
+	i := x.NewInbound(":0")
 	i.SetRegistry(new(transporttest.MockRegistry))
 	require.NoError(t, i.Start())
 	assert.NotEqual(t, ":0", i.Addr().String())
@@ -82,14 +86,16 @@ func TestInboundStartAndStop(t *testing.T) {
 }
 
 func TestInboundStartError(t *testing.T) {
-	err := NewInbound("invalid").
+	x := NewTransport()
+	err := x.NewInbound("invalid").
 		WithRegistry(new(transporttest.MockRegistry)).
 		Start()
 	assert.Error(t, err, "expected failure")
 }
 
 func TestInboundStopWithoutStarting(t *testing.T) {
-	i := NewInbound(":8000")
+	x := NewTransport()
+	i := x.NewInbound(":8000")
 	assert.Nil(t, i.Addr())
 	assert.NoError(t, i.Stop())
 }
@@ -106,7 +112,7 @@ func TestInboundMux(t *testing.T) {
 		w.Write([]byte("healthy"))
 	})
 
-	i := NewInbound(":0").WithMux("/rpc/v1", mux)
+	i := httpTransport.NewInbound(":0").WithMux("/rpc/v1", mux)
 	h := transporttest.NewMockUnaryHandler(mockCtrl)
 	reg := transporttest.NewMockRegistry(mockCtrl)
 	i.SetRegistry(reg)

@@ -99,7 +99,8 @@ type httpTransport struct{ t *testing.T }
 func (ht httpTransport) WithRegistry(r transport.Registry, f func(transport.UnaryOutbound)) {
 	httpTransport := http.NewTransport()
 
-	i := http.NewInbound("127.0.0.1:0").WithRegistry(r)
+	i := httpTransport.NewInbound("127.0.0.1:0")
+	i.SetRegistry(r)
 	require.NoError(ht.t, i.Start(), "failed to start")
 	defer i.Stop()
 
@@ -112,7 +113,8 @@ func (ht httpTransport) WithRegistry(r transport.Registry, f func(transport.Unar
 func (ht httpTransport) WithRegistryOneway(r transport.Registry, f func(transport.OnewayOutbound)) {
 	httpTransport := http.NewTransport()
 
-	i := http.NewInbound("127.0.0.1:0").WithRegistry(r)
+	i := httpTransport.NewInbound("127.0.0.1:0")
+	i.SetRegistry(r)
 	require.NoError(ht.t, i.Start(), "failed to start")
 	defer i.Stop()
 
@@ -129,7 +131,8 @@ func (tt tchannelTransport) WithRegistry(r transport.Registry, f func(transport.
 	serverOpts := testutils.NewOpts().SetServiceName(testService)
 	clientOpts := testutils.NewOpts().SetServiceName(testCaller)
 	testutils.WithServer(tt.t, serverOpts, func(ch *tchannel.Channel, hostPort string) {
-		i := tch.NewInbound(ch).WithRegistry(r)
+		i := tch.NewInbound(ch)
+		i.SetRegistry(r)
 		require.NoError(tt.t, i.Start(), "failed to start")
 
 		defer i.Stop()

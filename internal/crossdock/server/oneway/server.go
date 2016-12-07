@@ -43,7 +43,7 @@ func Start() {
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
 		Name: "oneway-test",
 		Inbounds: yarpc.Inbounds{
-			http.NewInbound(":8084"),
+			httpTransport.NewInbound(":8084"),
 		},
 		Outbounds: yarpc.Outbounds{
 			"client": {Oneway: h.Outbound},

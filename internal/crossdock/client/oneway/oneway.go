@@ -75,7 +75,7 @@ func newDispatcher(t crossdock.T) yarpc.Dispatcher {
 			},
 		},
 		//for call back
-		Inbounds: yarpc.Inbounds{http.NewInbound(fmt.Sprintf("%s:8089", server))},
+		Inbounds: yarpc.Inbounds{httpTransport.NewInbound(fmt.Sprintf("%s:8089", server))},
 	})
 
 	// register procedure for remote server to call us back on

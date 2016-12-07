@@ -123,12 +123,12 @@ func runTChannelClient(b *testing.B, c *tchannel.Channel, hostPort string) {
 }
 
 func Benchmark_HTTP_YARPCToYARPC(b *testing.B) {
+	httpTransport := yhttp.NewTransport()
 	serverCfg := yarpc.Config{
 		Name:     "server",
-		Inbounds: yarpc.Inbounds{yhttp.NewInbound(":8999")},
+		Inbounds: yarpc.Inbounds{httpTransport.NewInbound(":8999")},
 	}
 
-	httpTransport := yhttp.NewTransport()
 	clientCfg := yarpc.Config{
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
@@ -171,9 +171,10 @@ func Benchmark_HTTP_YARPCToNetHTTP(b *testing.B) {
 }
 
 func Benchmark_HTTP_NetHTTPToYARPC(b *testing.B) {
+	httpTransport := yhttp.NewTransport()
 	serverCfg := yarpc.Config{
 		Name:     "server",
-		Inbounds: yarpc.Inbounds{yhttp.NewInbound(":8996")},
+		Inbounds: yarpc.Inbounds{httpTransport.NewInbound(":8996")},
 	}
 
 	withDispatcher(b, serverCfg, func(server yarpc.Dispatcher) {

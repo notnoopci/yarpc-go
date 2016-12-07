@@ -37,13 +37,11 @@ import (
 //go:generate thriftrw --plugin=yarpc echo.thrift
 
 func main() {
-
 	httpTransport := http.NewTransport()
-
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "hello",
 		Inbounds: yarpc.Inbounds{
-			http.NewInbound(":8086"),
+			httpTransport.NewInbound(":8086"),
 		},
 		Outbounds: yarpc.Outbounds{
 			"hello": {

@@ -327,7 +327,8 @@ func (th panickedHandler) Handle(context.Context, *transport.Request, transport.
 }
 
 func TestHandlerPanic(t *testing.T) {
-	inbound := NewInbound("localhost:0")
+	httpTransport := NewTransport()
+	inbound := httpTransport.NewInbound("localhost:0")
 	serverDispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name:     "yarpc-test",
 		Inbounds: yarpc.Inbounds{inbound},
@@ -341,9 +342,6 @@ func TestHandlerPanic(t *testing.T) {
 
 	require.NoError(t, serverDispatcher.Start())
 	defer serverDispatcher.Stop()
-
-	httpTransport := NewTransport()
-	// TODO http transport lifecycle
 
 	clientDispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test-client",
