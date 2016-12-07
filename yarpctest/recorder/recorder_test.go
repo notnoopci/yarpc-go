@@ -12,8 +12,6 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 
@@ -162,18 +160,12 @@ func (t *testingTMock) Fatal(args ...interface{}) {
 
 func withDisconnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
 	httpTransport := http.NewTransport()
-	// TODO lifecycle
 
 	clientDisp := yarpc.NewDispatcher(yarpc.Config{
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"server": {
-				Unary: http.NewOutbound(
-					single.New(
-						hostport.PeerIdentifier("127.0.0.1:65535"),
-						httpTransport,
-					),
-				),
+				Unary: httpTransport.NewSingleOutbound("127.0.0.1:65535"),
 			},
 		},
 		OutboundMiddleware: yarpc.OutboundMiddleware{
@@ -204,18 +196,12 @@ func withConnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
 	defer serverDisp.Stop()
 
 	httpTransport := http.NewTransport()
-	// TODO http transport lifecycle
 
 	clientDisp := yarpc.NewDispatcher(yarpc.Config{
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"server": {
-				Unary: http.NewOutbound(
-					single.New(
-						hostport.PeerIdentifier(serverHTTP.Addr().String()),
-						httpTransport,
-					),
-				),
+				Unary: httpTransport.NewSingleOutbound(serverHTTP.Addr().String()),
 			},
 		},
 		OutboundMiddleware: yarpc.OutboundMiddleware{

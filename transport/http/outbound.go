@@ -55,6 +55,26 @@ var defaultURLTemplate, _ = url.Parse("http://localhost")
 // for getting potential downstream hosts.
 // Chooser.Choose MUST return *hostport.Peer objects.
 // Chooser.Start MUST be called before Outbound.Start
+func (t *Transport) NewOutbound(chooser peer.Chooser) *Outbound {
+	return &Outbound{
+		started:     atomic.NewBool(false),
+		chooser:     chooser,
+		urlTemplate: defaultURLTemplate,
+		tracer:      t.tracer,
+	}
+}
+
+// NewSingleOutbound builds a new HTTP outbound to a single peer by address.
+// Behind the scenes, this assembles a single peer chooser that connects this
+// very transport to retain that peer.
+func (t *Transport) NewSingleOutbound(addr string) *Outbound {
+	return t.NewOutbound(single.New(hostport.PeerIdentifier(addr), t))
+}
+
+// NewOutbound builds a new HTTP outbound built around a peer.Chooser
+// for getting potential downstream hosts.
+// Chooser.Choose MUST return *hostport.Peer objects.
+// Chooser.Start MUST be called before Outbound.Start
 func NewOutbound(chooser peer.Chooser) *Outbound {
 	return &Outbound{
 		started:     atomic.NewBool(false),

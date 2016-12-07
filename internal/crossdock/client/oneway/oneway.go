@@ -28,8 +28,6 @@ import (
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
 	"go.uber.org/yarpc/internal/crossdock/client/random"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport/http"
 
 	"github.com/crossdock/crossdock-go"
@@ -73,10 +71,7 @@ func newDispatcher(t crossdock.T) yarpc.Dispatcher {
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"oneway-test": {
-				Oneway: http.NewOutbound(single.New(
-					hostport.PeerIdentifier(fmt.Sprintf("%s:8084", server)),
-					httpTransport,
-				)),
+				Oneway: httpTransport.NewSingleOutbound(fmt.Sprintf("%s:8084", server)),
 			},
 		},
 		//for call back

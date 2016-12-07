@@ -30,8 +30,6 @@ import (
 
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/errors"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
@@ -100,18 +98,12 @@ type httpTransport struct{ t *testing.T }
 
 func (ht httpTransport) WithRegistry(r transport.Registry, f func(transport.UnaryOutbound)) {
 	httpTransport := http.NewTransport()
-	// TODO lifecycle
 
 	i := http.NewInbound("127.0.0.1:0").WithRegistry(r)
 	require.NoError(ht.t, i.Start(), "failed to start")
 	defer i.Stop()
 
-	o := http.NewOutbound(
-		single.New(
-			hostport.PeerIdentifier(i.Addr().String()),
-			httpTransport,
-		),
-	)
+	o := httpTransport.NewSingleOutbound(i.Addr().String())
 	require.NoError(ht.t, o.Start(), "failed to start outbound")
 	defer o.Stop()
 	f(o)
@@ -119,18 +111,12 @@ func (ht httpTransport) WithRegistry(r transport.Registry, f func(transport.Unar
 
 func (ht httpTransport) WithRegistryOneway(r transport.Registry, f func(transport.OnewayOutbound)) {
 	httpTransport := http.NewTransport()
-	// TODO lifecycle
 
 	i := http.NewInbound("127.0.0.1:0").WithRegistry(r)
 	require.NoError(ht.t, i.Start(), "failed to start")
 	defer i.Stop()
 
-	o := http.NewOutbound(
-		single.New(
-			hostport.PeerIdentifier(i.Addr().String()),
-			httpTransport,
-		),
-	)
+	o := httpTransport.NewSingleOutbound(i.Addr().String())
 	require.NoError(ht.t, o.Start(), "failed to start outbound")
 	defer o.Stop()
 	f(o)

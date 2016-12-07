@@ -28,8 +28,6 @@ import (
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/crossdock/thrift/oneway/yarpc/onewayserver"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport/http"
 )
 
@@ -39,12 +37,7 @@ var dispatcher yarpc.Dispatcher
 func Start() {
 	httpTransport := http.NewTransport()
 	h := onewayHandler{
-		Outbound: http.NewOutbound(
-			single.New(
-				hostport.PeerIdentifier("127.0.0.1:8089"),
-				httpTransport,
-			),
-		),
+		Outbound: httpTransport.NewSingleOutbound("127.0.0.1:8089"),
 	}
 
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{

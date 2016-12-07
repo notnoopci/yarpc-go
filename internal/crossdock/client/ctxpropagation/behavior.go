@@ -30,8 +30,6 @@ import (
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
 	server "go.uber.org/yarpc/internal/crossdock/server/yarpc"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
@@ -329,12 +327,7 @@ func buildDispatcher(t crossdock.T) (dispatcher yarpc.Dispatcher, tconfig server
 	var outbound transport.UnaryOutbound
 	switch trans := t.Param(params.Transport); trans {
 	case "http":
-		outbound = http.NewOutbound(
-			single.New(
-				hostport.PeerIdentifier(fmt.Sprintf("%s:8081", subject)),
-				httpTransport,
-			),
-		)
+		outbound = httpTransport.NewSingleOutbound(fmt.Sprintf("%s:8081", subject))
 		tconfig.TChannel = &server.TChannelTransport{Host: self, Port: 8087}
 	case "tchannel":
 		outbound = tch.NewOutbound(ch).WithHostPort(fmt.Sprintf("%s:8082", subject))
