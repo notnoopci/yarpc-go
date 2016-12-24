@@ -25,7 +25,9 @@ import (
 	"fmt"
 	"sync"
 
+	"go.uber.org/atomic"
 	"go.uber.org/yarpc/api/middleware"
+	"go.uber.org/yarpc/api/runner"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal"
 	"go.uber.org/yarpc/internal/clientconfig"
@@ -86,6 +88,8 @@ func NewDispatcher(cfg Config) *Dispatcher {
 		outbounds:         convertOutbounds(cfg.Outbounds, cfg.OutboundMiddleware),
 		transports:        collectTransports(cfg.Inbounds, cfg.Outbounds),
 		inboundMiddleware: cfg.InboundMiddleware,
+		started:           make(chan struct{}, 0),
+		stopped:           make(chan struct{}, 0),
 	}
 }
 
@@ -165,6 +169,10 @@ type Dispatcher struct {
 	transports []transport.Transport
 
 	inboundMiddleware InboundMiddleware
+
+	running atomic.Bool
+	started chan struct{}
+	stopped chan struct{}
 }
 
 // Inbounds returns a copy of the list of inbounds for this RPC object.
@@ -225,6 +233,85 @@ func (d *Dispatcher) Register(rs []transport.Procedure) {
 	}
 
 	d.table.Register(procedures)
+}
+
+func (d *Dispatcher) Run(ctx context.Context) error {
+	if d.running.Swap(true) {
+		// TODO return error
+		return nil
+	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	var errs []error
+	var errsMu sync.Mutex
+	var allStart sync.WaitGroup
+	var allStop sync.WaitGroup
+
+	run := func(r runner.Runner) {
+		if r == nil {
+			return
+		}
+
+		go func() {
+			if err := r.Run(ctx); err != nil {
+				// Cancel. Cancel them all.
+				cancel()
+				errsMu.Lock()
+				errs = append(errs, err)
+				errsMu.Unlock()
+			}
+		}()
+
+		allStart.Add(1)
+		go func() {
+			<-r.Started()
+			allStart.Done()
+		}()
+
+		allStop.Add(1)
+		go func() {
+			<-r.Stopped()
+			allStop.Done()
+		}()
+	}
+
+	for _, o := range d.outbounds {
+		run(o.Unary)
+		run(o.Oneway)
+	}
+
+	allStart.Wait()
+	errsMu.Lock()
+	if len(errs) > 0 {
+		return errors.ErrorGroup(errs)
+	}
+	errsMu.Unlock()
+
+	for _, i := range d.inbounds {
+		run(i)
+	}
+
+	allStart.Wait()
+	errsMu.Lock()
+	if len(errs) > 0 {
+		return errors.ErrorGroup(errs)
+	}
+	errsMu.Unlock()
+
+	for _, t := range d.transports {
+		run(t)
+	}
+
+	allStop.Wait()
+	errsMu.Lock()
+	if len(errs) > 0 {
+		return errors.ErrorGroup(errs)
+	}
+	errsMu.Unlock()
+
+	return nil
 }
 
 // Start Start the RPC allowing it to accept and processing new incoming

@@ -21,10 +21,9 @@
 package http
 
 import (
+	"context"
 	"net"
 	"net/http"
-
-	"golang.org/x/net/context"
 
 	"go.uber.org/atomic"
 	"go.uber.org/yarpc/api/transport"

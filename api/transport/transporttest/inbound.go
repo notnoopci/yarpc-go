@@ -24,6 +24,7 @@
 package transporttest
 
 import (
+	context "context"
 	gomock "github.com/golang/mock/gomock"
 	transport "go.uber.org/yarpc/api/transport"
 )
@@ -59,6 +60,16 @@ func (_mr *_MockInboundRecorder) IsRunning() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "IsRunning")
 }
 
+func (_m *MockInbound) Run(_param0 context.Context) error {
+	ret := _m.ctrl.Call(_m, "Run", _param0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+func (_mr *_MockInboundRecorder) Run(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Run", arg0)
+}
+
 func (_m *MockInbound) SetRouter(_param0 transport.Router) {
 	_m.ctrl.Call(_m, "SetRouter", _param0)
 }
@@ -77,6 +88,16 @@ func (_mr *_MockInboundRecorder) Start() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Start")
 }
 
+func (_m *MockInbound) Started() <-chan struct{} {
+	ret := _m.ctrl.Call(_m, "Started")
+	ret0, _ := ret[0].(<-chan struct{})
+	return ret0
+}
+
+func (_mr *_MockInboundRecorder) Started() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Started")
+}
+
 func (_m *MockInbound) Stop() error {
 	ret := _m.ctrl.Call(_m, "Stop")
 	ret0, _ := ret[0].(error)
@@ -85,6 +106,16 @@ func (_m *MockInbound) Stop() error {
 
 func (_mr *_MockInboundRecorder) Stop() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Stop")
+}
+
+func (_m *MockInbound) Stopped() <-chan struct{} {
+	ret := _m.ctrl.Call(_m, "Stopped")
+	ret0, _ := ret[0].(<-chan struct{})
+	return ret0
+}
+
+func (_mr *_MockInboundRecorder) Stopped() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Stopped")
 }
 
 func (_m *MockInbound) Transports() []transport.Transport {

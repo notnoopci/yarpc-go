@@ -21,13 +21,14 @@
 package tchannel
 
 import (
-	"go.uber.org/atomic"
+	"context"
+
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/sync"
-	"golang.org/x/net/context"
 
 	"github.com/opentracing/opentracing-go"
+	"go.uber.org/atomic"
 )
 
 // ChannelInbound is a TChannel Inbound backed by a pre-existing TChannel
@@ -102,6 +103,14 @@ func (i *ChannelInbound) Run(ctx context.Context) error {
 	close(i.stopped)
 
 	return nil
+}
+
+func (i *ChannelInbound) Started() <-chan struct{} {
+	return i.started
+}
+
+func (i *ChannelInbound) Stopped() <-chan struct{} {
+	return i.stopped
 }
 
 // Start starts a TChannel inbound. This arranges for registration of the

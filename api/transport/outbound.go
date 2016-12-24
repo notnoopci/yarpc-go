@@ -20,13 +20,18 @@
 
 package transport
 
-import "context"
+import (
+	"context"
+
+	"go.uber.org/yarpc/api/runner"
+)
 
 //go:generate mockgen -destination=transporttest/outbound.go -package=transporttest go.uber.org/yarpc/api/transport UnaryOutbound,OnewayOutbound
 
 // Outbound is the common interface for all outbounds
 type Outbound interface {
 	Lifecycle
+	runner.Runner
 
 	// Transports returns the transports that used by this outbound, so they
 	// can be collected for lifecycle management, typically by a Dispatcher.

@@ -20,8 +20,11 @@
 
 package transport
 
+import "go.uber.org/yarpc/api/runner"
+
 // Transport is the interface needed by a Dispatcher to manage the life cycle
 // of a transport.
 type Transport interface {
 	Lifecycle
+	runner.Runner
 }

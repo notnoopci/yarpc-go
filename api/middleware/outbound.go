@@ -78,6 +78,18 @@ func (fo unaryOutboundWithMiddleware) Transports() []transport.Transport {
 	return fo.o.Transports()
 }
 
+func (fo unaryOutboundWithMiddleware) Run(ctx context.Context) error {
+	return fo.o.Run(ctx)
+}
+
+func (fo unaryOutboundWithMiddleware) Started() <-chan struct{} {
+	return fo.o.Started()
+}
+
+func (fo unaryOutboundWithMiddleware) Stopped() <-chan struct{} {
+	return fo.o.Stopped()
+}
+
 func (fo unaryOutboundWithMiddleware) Start() error {
 	return fo.o.Start()
 }
@@ -151,6 +163,18 @@ func (fo onewayOutboundWithMiddleware) Transports() []transport.Transport {
 	return fo.o.Transports()
 }
 
+func (fo onewayOutboundWithMiddleware) Run(ctx context.Context) error {
+	return fo.o.Run(ctx)
+}
+
+func (fo onewayOutboundWithMiddleware) Started() <-chan struct{} {
+	return fo.o.Started()
+}
+
+func (fo onewayOutboundWithMiddleware) Stopped() <-chan struct{} {
+	return fo.o.Stopped()
+}
+
 func (fo onewayOutboundWithMiddleware) Start() error {
 	return fo.o.Start()
 }
@@ -171,4 +195,5 @@ type nopOnewayOutbound struct{}
 
 func (nopOnewayOutbound) CallOneway(ctx context.Context, request *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
 	return out.CallOneway(ctx, request)
+
 }

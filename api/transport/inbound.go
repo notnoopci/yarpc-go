@@ -20,12 +20,15 @@
 
 package transport
 
+import "go.uber.org/yarpc/api/runner"
+
 //go:generate mockgen -destination=transporttest/inbound.go -package=transporttest go.uber.org/yarpc/api/transport Inbound
 
 // Inbound is a transport that knows how to receive requests for procedure
 // calls.
 type Inbound interface {
 	Lifecycle
+	runner.Runner
 
 	// SetRouter configures the inbound to dispatch requests through a
 	// router, typically called by a Dispatcher with its RouteTable of handled

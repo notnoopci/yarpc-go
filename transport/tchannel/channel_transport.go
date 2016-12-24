@@ -21,9 +21,8 @@
 package tchannel
 
 import (
+	"context"
 	"fmt"
-
-	"golang.org/x/net/context"
 
 	"go.uber.org/atomic"
 	"go.uber.org/yarpc/internal/sync"

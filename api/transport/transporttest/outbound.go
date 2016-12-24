@@ -71,6 +71,16 @@ func (_mr *_MockUnaryOutboundRecorder) IsRunning() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "IsRunning")
 }
 
+func (_m *MockUnaryOutbound) Run(_param0 context.Context) error {
+	ret := _m.ctrl.Call(_m, "Run", _param0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+func (_mr *_MockUnaryOutboundRecorder) Run(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Run", arg0)
+}
+
 func (_m *MockUnaryOutbound) Start() error {
 	ret := _m.ctrl.Call(_m, "Start")
 	ret0, _ := ret[0].(error)
@@ -81,6 +91,16 @@ func (_mr *_MockUnaryOutboundRecorder) Start() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Start")
 }
 
+func (_m *MockUnaryOutbound) Started() <-chan struct{} {
+	ret := _m.ctrl.Call(_m, "Started")
+	ret0, _ := ret[0].(<-chan struct{})
+	return ret0
+}
+
+func (_mr *_MockUnaryOutboundRecorder) Started() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Started")
+}
+
 func (_m *MockUnaryOutbound) Stop() error {
 	ret := _m.ctrl.Call(_m, "Stop")
 	ret0, _ := ret[0].(error)
@@ -89,6 +109,16 @@ func (_m *MockUnaryOutbound) Stop() error {
 
 func (_mr *_MockUnaryOutboundRecorder) Stop() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Stop")
+}
+
+func (_m *MockUnaryOutbound) Stopped() <-chan struct{} {
+	ret := _m.ctrl.Call(_m, "Stopped")
+	ret0, _ := ret[0].(<-chan struct{})
+	return ret0
+}
+
+func (_mr *_MockUnaryOutboundRecorder) Stopped() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Stopped")
 }
 
 func (_m *MockUnaryOutbound) Transports() []transport.Transport {
@@ -143,6 +173,16 @@ func (_mr *_MockOnewayOutboundRecorder) IsRunning() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "IsRunning")
 }
 
+func (_m *MockOnewayOutbound) Run(_param0 context.Context) error {
+	ret := _m.ctrl.Call(_m, "Run", _param0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+func (_mr *_MockOnewayOutboundRecorder) Run(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Run", arg0)
+}
+
 func (_m *MockOnewayOutbound) Start() error {
 	ret := _m.ctrl.Call(_m, "Start")
 	ret0, _ := ret[0].(error)
@@ -153,6 +193,16 @@ func (_mr *_MockOnewayOutboundRecorder) Start() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Start")
 }
 
+func (_m *MockOnewayOutbound) Started() <-chan struct{} {
+	ret := _m.ctrl.Call(_m, "Started")
+	ret0, _ := ret[0].(<-chan struct{})
+	return ret0
+}
+
+func (_mr *_MockOnewayOutboundRecorder) Started() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Started")
+}
+
 func (_m *MockOnewayOutbound) Stop() error {
 	ret := _m.ctrl.Call(_m, "Stop")
 	ret0, _ := ret[0].(error)
@@ -161,6 +211,16 @@ func (_m *MockOnewayOutbound) Stop() error {
 
 func (_mr *_MockOnewayOutboundRecorder) Stop() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Stop")
+}
+
+func (_m *MockOnewayOutbound) Stopped() <-chan struct{} {
+	ret := _m.ctrl.Call(_m, "Stopped")
+	ret0, _ := ret[0].(<-chan struct{})
+	return ret0
+}
+
+func (_mr *_MockOnewayOutboundRecorder) Stopped() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Stopped")
 }
 
 func (_m *MockOnewayOutbound) Transports() []transport.Transport {

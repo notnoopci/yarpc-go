@@ -59,6 +59,18 @@ func (x unaryChainExec) Transports() []transport.Transport {
 	return x.Final.Transports()
 }
 
+func (x unaryChainExec) Run(ctx context.Context) error {
+	return x.Final.Run(ctx)
+}
+
+func (x unaryChainExec) Started() <-chan struct{} {
+	return x.Final.Started()
+}
+
+func (x unaryChainExec) Stopped() <-chan struct{} {
+	return x.Final.Stopped()
+}
+
 func (x unaryChainExec) Start() error {
 	return x.Final.Start()
 }
@@ -110,6 +122,18 @@ type onewayChainExec struct {
 
 func (x onewayChainExec) Transports() []transport.Transport {
 	return x.Final.Transports()
+}
+
+func (x onewayChainExec) Run(ctx context.Context) error {
+	return x.Final.Run(ctx)
+}
+
+func (x onewayChainExec) Started() <-chan struct{} {
+	return x.Final.Started()
+}
+
+func (x onewayChainExec) Stopped() <-chan struct{} {
+	return x.Final.Stopped()
 }
 
 func (x onewayChainExec) Start() error {
