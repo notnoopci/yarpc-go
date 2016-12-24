@@ -43,6 +43,7 @@ func popHeader(h http.Header, n string) string {
 
 // handler adapts a transport.Handler into a handler for net/http.
 type handler struct {
+	ctx    context.Context
 	router transport.Router
 	tracer opentracing.Tracer
 }

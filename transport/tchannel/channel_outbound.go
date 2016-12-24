@@ -24,6 +24,7 @@ import (
 	"context"
 	"io"
 
+	"go.uber.org/atomic"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/errors"
@@ -38,6 +39,8 @@ func (t *ChannelTransport) NewOutbound() *ChannelOutbound {
 	return &ChannelOutbound{
 		channel:   t.ch,
 		transport: t,
+		started:   make(chan struct{}, 0),
+		stopped:   make(chan struct{}, 0),
 	}
 }
 
@@ -48,6 +51,8 @@ func (t *ChannelTransport) NewSingleOutbound(addr string) *ChannelOutbound {
 		channel:   t.ch,
 		transport: t,
 		addr:      addr,
+		started:   make(chan struct{}, 0),
+		stopped:   make(chan struct{}, 0),
 	}
 }
 
@@ -60,12 +65,39 @@ type ChannelOutbound struct {
 	// Otherwise, the global peer list of the Channel will be used.
 	addr string
 
+	running atomic.Bool
+	started chan struct{}
+	stopped chan struct{}
+
 	once sync.LifecycleOnce
 }
 
 // Transports returns the underlying TChannel Transport for this outbound.
 func (o *ChannelOutbound) Transports() []transport.Transport {
 	return []transport.Transport{o.transport}
+}
+
+func (o *ChannelOutbound) Run(ctx context.Context) error {
+	if o.running.Swap(true) {
+		// TODO return an error
+		return nil
+	}
+
+	close(o.started)
+
+	<-ctx.Done()
+
+	close(o.stopped)
+
+	return nil
+}
+
+func (o *ChannelOutbound) Started() <-chan struct{} {
+	return o.started
+}
+
+func (o *ChannelOutbound) Stopped() <-chan struct{} {
+	return o.stopped
 }
 
 // Start starts the TChannel outbound.

@@ -21,9 +21,11 @@
 package tchannel
 
 import (
+	"go.uber.org/atomic"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/sync"
+	"golang.org/x/net/context"
 
 	"github.com/opentracing/opentracing-go"
 )
@@ -37,6 +39,10 @@ type ChannelInbound struct {
 	tracer    opentracing.Tracer
 	transport *ChannelTransport
 
+	running atomic.Bool
+	started chan struct{}
+	stopped chan struct{}
+
 	once sync.LifecycleOnce
 }
 
@@ -48,6 +54,8 @@ func (t *ChannelTransport) NewInbound() *ChannelInbound {
 		ch:        t.ch,
 		tracer:    t.tracer,
 		transport: t,
+		started:   make(chan struct{}, 0),
+		stopped:   make(chan struct{}, 0),
 	}
 }
 
@@ -67,6 +75,33 @@ func (i *ChannelInbound) Transports() []transport.Transport {
 // Channel returns the underlying Channel for this Inbound.
 func (i *ChannelInbound) Channel() Channel {
 	return i.ch
+}
+
+func (i *ChannelInbound) Run(ctx context.Context) error {
+	if i.running.Swap(true) {
+		// TODO return error
+		return nil
+	}
+
+	if i.router == nil {
+		return errors.ErrNoRouter
+	}
+
+	// Set up handlers. This must occur after construction because the
+	// dispatcher, or its equivalent, calls SetRouter before Start.
+	// This also means that starting inbounds should block starting the transport.
+	sc := i.ch.GetSubChannel(i.ch.ServiceName())
+	existing := sc.GetHandlers()
+	sc.SetHandler(handler{existing: existing, router: i.router, tracer: i.tracer})
+
+	close(i.started)
+
+	// Wait for context cancellation
+	<-ctx.Done()
+
+	close(i.stopped)
+
+	return nil
 }
 
 // Start starts a TChannel inbound. This arranges for registration of the

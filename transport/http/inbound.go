@@ -24,6 +24,9 @@ import (
 	"net"
 	"net/http"
 
+	"golang.org/x/net/context"
+
+	"go.uber.org/atomic"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
 	intnet "go.uber.org/yarpc/internal/net"
@@ -70,6 +73,10 @@ type Inbound struct {
 	tracer     opentracing.Tracer
 
 	once sync.LifecycleOnce
+
+	running atomic.Bool
+	started chan struct{}
+	stopped chan struct{}
 }
 
 // Tracer configures a tracer on this inbound.
@@ -89,6 +96,60 @@ func (i *Inbound) SetRouter(router transport.Router) {
 func (i *Inbound) Transports() []transport.Transport {
 	// TODO factor out transport and return it here.
 	return []transport.Transport{}
+}
+
+func (i *Inbound) Run(ctx context.Context) error {
+	if i.running.Swap(true) {
+		// TODO return an error
+		return nil
+	}
+
+	if i.router == nil {
+		return errors.ErrNoRouter
+	}
+
+	var httpHandler http.Handler = handler{
+		router: i.router,
+		tracer: i.tracer,
+		ctx:    ctx,
+	}
+	if i.mux != nil {
+		i.mux.Handle(i.muxPattern, httpHandler)
+		httpHandler = i.mux
+	}
+
+	i.server = intnet.NewHTTPServer(&http.Server{
+		Addr:    i.addr,
+		Handler: httpHandler,
+	})
+	if err := i.server.ListenAndServe(); err != nil {
+		return err
+	}
+
+	i.addr = i.server.Listener().Addr().String() // in case it changed
+
+	close(i.started)
+
+	// Wait for context to be cancelled.
+	<-ctx.Done()
+
+	// Stop accepting requests.
+	i.server.Stop()
+
+	// TODO wait for all inbound requests to finish. This could potentially be
+	// a concern of peers or the HTTP transport runner.
+
+	close(i.stopped)
+
+	return nil
+}
+
+func (i *Inbound) Started() <-chan struct{} {
+	return i.started
+}
+
+func (i *Inbound) Stopped() <-chan struct{} {
+	return i.stopped
 }
 
 // Start starts the inbound with a given service detail, opening a listening
@@ -138,6 +199,20 @@ func (i *Inbound) stop() error {
 // IsRunning returns whether the inbound is currently running
 func (i *Inbound) IsRunning() bool {
 	return i.once.IsRunning()
+
+	// select {
+	// case <-i.started:
+	// default:
+	// 	return false
+	// }
+
+	// select {
+	// case <-i.stopped:
+	// 	return false
+	// default:
+	// }
+
+	// return true
 }
 
 // Addr returns the address on which the server is listening. Returns nil if

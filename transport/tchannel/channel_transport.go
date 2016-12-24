@@ -23,6 +23,9 @@ package tchannel
 import (
 	"fmt"
 
+	"golang.org/x/net/context"
+
+	"go.uber.org/atomic"
 	"go.uber.org/yarpc/internal/sync"
 
 	"github.com/opentracing/opentracing-go"
@@ -59,10 +62,12 @@ func NewChannelTransport(opts ...TransportOption) *ChannelTransport {
 	}
 
 	return &ChannelTransport{
-		ch:     ch,
-		err:    err,
-		addr:   config.addr,
-		tracer: config.tracer,
+		ch:      ch,
+		err:     err,
+		addr:    config.addr,
+		tracer:  config.tracer,
+		started: make(chan struct{}, 0),
+		stopped: make(chan struct{}, 0),
 	}
 }
 
@@ -78,6 +83,10 @@ type ChannelTransport struct {
 	addr   string
 	tracer opentracing.Tracer
 
+	running atomic.Bool
+	started chan struct{}
+	stopped chan struct{}
+
 	once sync.LifecycleOnce
 }
 
@@ -89,6 +98,36 @@ func (t *ChannelTransport) Channel() Channel {
 // ListenAddr exposes the listen address of the transport.
 func (t *ChannelTransport) ListenAddr() string {
 	return t.addr
+}
+
+func (t *ChannelTransport) Run(ctx context.Context) error {
+	if t.running.Swap(true) {
+		// TODO return an error
+		return nil
+	}
+
+	if err := t.start(); err != nil {
+		return err
+	}
+
+	close(t.started)
+
+	<-ctx.Done()
+
+	// Flush all pending reuqests
+	t.ch.Close()
+
+	close(t.stopped)
+
+	return nil
+}
+
+func (o *ChannelTransport) Started() <-chan struct{} {
+	return o.started
+}
+
+func (o *ChannelTransport) Stopped() <-chan struct{} {
+	return o.stopped
 }
 
 // Start starts a TChannel transport, opening listening sockets and accepting

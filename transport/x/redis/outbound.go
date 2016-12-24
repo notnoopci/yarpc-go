@@ -24,6 +24,7 @@ import (
 	"context"
 	"time"
 
+	"go.uber.org/atomic"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/sync"
@@ -40,6 +41,10 @@ type Outbound struct {
 	tracer   opentracing.Tracer
 	queueKey string
 
+	running atomic.Bool
+	started chan struct{}
+	stopped chan struct{}
+
 	once sync.LifecycleOnce
 }
 
@@ -50,6 +55,8 @@ func NewOnewayOutbound(client Client, queueKey string) *Outbound {
 		client:   client,
 		tracer:   opentracing.GlobalTracer(),
 		queueKey: queueKey,
+		started:  make(chan struct{}, 0),
+		stopped:  make(chan struct{}, 0),
 	}
 }
 
@@ -63,6 +70,28 @@ func (o *Outbound) Transports() []transport.Transport {
 func (o *Outbound) WithTracer(tracer opentracing.Tracer) *Outbound {
 	o.tracer = tracer
 	return o
+}
+
+func (o *Outbound) Run(ctx context.Context) error {
+	if o.running.Swap(true) {
+		// TODO return error
+		return nil
+	}
+
+	close(o.started)
+
+	<-ctx.Done()
+
+	close(o.stopped)
+	return nil
+}
+
+func (o *Outbound) Started() <-chan struct{} {
+	return o.started
+}
+
+func (o *Outbound) Stopped() <-chan struct{} {
+	return o.stopped
 }
 
 // Start creates connection to the redis instance

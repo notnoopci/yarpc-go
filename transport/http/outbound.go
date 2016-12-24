@@ -30,6 +30,7 @@ import (
 	"strings"
 	"time"
 
+	"go.uber.org/atomic"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
@@ -115,6 +116,10 @@ type Outbound struct {
 	urlTemplate *url.URL
 	tracer      opentracing.Tracer
 
+	running atomic.Bool
+	started chan struct{}
+	stopped chan struct{}
+
 	once sync.LifecycleOnce
 }
 
@@ -133,6 +138,29 @@ func (o *Outbound) setURLTemplate(URL string) {
 func (o *Outbound) Transports() []transport.Transport {
 	// TODO factor out transport and return it here.
 	return []transport.Transport{}
+}
+
+func (o *Outbound) Run(ctx context.Context) error {
+	if o.running.Swap(true) {
+		// TODO error
+		return nil
+	}
+
+	close(o.started)
+
+	<-ctx.Done()
+
+	close(o.stopped)
+
+	return nil
+}
+
+func (o *Outbound) Started() <-chan struct{} {
+	return o.started
+}
+
+func (o *Outbound) Stopped() <-chan struct{} {
+	return o.stopped
 }
 
 // Start the HTTP outbound

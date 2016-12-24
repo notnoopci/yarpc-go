@@ -22,11 +22,13 @@ package redis
 
 import (
 	"context"
+	"sync"
 	"time"
 
+	"go.uber.org/atomic"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
-	"go.uber.org/yarpc/internal/sync"
+	intsync "go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/serialize"
 
 	"github.com/opentracing/opentracing-go"
@@ -50,9 +52,13 @@ type Inbound struct {
 	queueKey      string
 	processingKey string
 
+	running atomic.Bool
+	started chan struct{}
+	stopped chan struct{}
+
 	stop chan struct{}
 
-	once sync.LifecycleOnce
+	once intsync.LifecycleOnce
 }
 
 // NewInbound creates a redis Inbound that satisfies transport.Inbound.
@@ -68,6 +74,9 @@ func NewInbound(client Client, queueKey, processingKey string, timeout time.Dura
 		timeout:       timeout,
 		queueKey:      queueKey,
 		processingKey: processingKey,
+
+		started: make(chan struct{}),
+		stopped: make(chan struct{}),
 
 		stop: make(chan struct{}),
 	}
@@ -97,6 +106,102 @@ func (i *Inbound) WithRouter(router transport.Router) *Inbound {
 // by a dispatcher when it starts.
 func (i *Inbound) SetRouter(router transport.Router) {
 	i.router = router
+}
+
+func (i *Inbound) Run(ctx context.Context) error {
+	if i.running.Swap(true) {
+		// TODO return error
+		return nil
+	}
+
+	if i.router == nil {
+		return errors.ErrNoRouter
+	}
+
+	var err error
+	for attempt := 0; attempt < maxConnectRetries; attempt++ {
+		err = i.client.Start()
+		if err == nil {
+			break
+		}
+		time.Sleep(connectRetryDelay)
+	}
+	if err != nil {
+		return err
+	}
+
+	close(i.started)
+
+	// Ingest from queue and handle asynchronously, until root context is
+	// cancelled.
+	var pending sync.WaitGroup
+	for {
+		select {
+		case <-ctx.Done():
+		default:
+			// TODO: logging
+			item, err := i.client.BRPopLPush(i.queueKey, i.processingKey, i.timeout)
+			if err != nil {
+				return err
+			}
+			pending.Add(1)
+			go func() {
+				defer i.client.LRem(i.queueKey, item)
+				defer pending.Done()
+				// TODO log returned error
+				i.ingest(ctx, item)
+			}()
+		}
+	}
+
+	// Wait for all pending requests to drain
+	pending.Wait()
+
+	close(i.stopped)
+
+	return nil
+}
+
+func (i *Inbound) Started() <-chan struct{} {
+	return i.started
+}
+
+func (i *Inbound) Stopped() <-chan struct{} {
+	return i.stopped
+}
+
+func (i *Inbound) ingest(ctx context.Context, item []byte) error {
+	start := time.Now()
+
+	spanContext, req, err := serialize.FromBytes(i.tracer, item)
+	if err != nil {
+		return err
+	}
+
+	extractOpenTracingSpan := transport.ExtractOpenTracingSpan{
+		ParentSpanContext: spanContext,
+		Tracer:            i.tracer,
+		TransportName:     transportName,
+		StartTime:         start,
+	}
+	ctx, span := extractOpenTracingSpan.Do(ctx, req)
+	defer span.Finish()
+
+	if err := transport.ValidateRequest(req); err != nil {
+		return transport.UpdateSpanWithErr(span, err)
+	}
+
+	spec, err := i.router.Choose(ctx, req)
+	if err != nil {
+		return transport.UpdateSpanWithErr(span, err)
+	}
+
+	if spec.Type() != transport.Oneway {
+		err = errors.UnsupportedTypeError{Transport: transportName, Type: string(spec.Type())}
+		return transport.UpdateSpanWithErr(span, err)
+	}
+
+	return transport.DispatchOnewayHandler(ctx, spec.Oneway(), req)
 }
 
 // Start starts the inbound, reading from the queueKey
