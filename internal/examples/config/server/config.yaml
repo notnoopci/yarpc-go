@@ -1,13 +1,13 @@
 inbounds:
   http:
-    address: ":8080"
+    address: :${HTTP_PORT:8080}
   redis:
     queueKey: requests
     processingKey: processing
   # tchannel: {}
 transports:
   # tchannel:
-  #   address: ":4040"
+  #   address: ":${TCHANNEL_PORT:4040}"
   #   service: myservice
   redis:
-    address: localhost:6379
+    address: localhost:${REDIS_PORT:6379}
