@@ -44,6 +44,14 @@ type peerListConfig struct {
 	Etc  attributeMap `config:",squash"`
 }
 
+// Empty returns whether the peer list configuration is empty.
+// This is a facility for the HTTP transport specifically since it can infer
+// the configuration for the single-peer case from its "url" attribute.
+func (pc PeerListConfig) Empty() bool {
+	c := pc.peerListConfig
+	return c.Peer == "" && len(c.Etc) == 0
+}
+
 // BuildChooser translates a chooser configuration into a peer chooser, backed
 // by a peer list bound to a peer list binder.
 func (pc PeerListConfig) BuildChooser(transport peer.Transport, identify func(string) peer.Identifier, kit *Kit) (peer.Chooser, error) {
