@@ -21,7 +21,12 @@
 package tchannel
 
 import (
+	"fmt"
+
+	"github.com/opentracing/opentracing-go"
+
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/x/config"
 )
 
@@ -53,38 +58,98 @@ type InboundConfig struct{}
 // 	    tchannel:
 // 	      address: 127.0.0.1:4040
 type OutboundConfig struct {
-	Address string `config:"address,interpolate"`
+	config.PeerListConfig
 }
 
 // TransportSpec returns a TransportSpec for the TChannel unary transport. See
 // TransportConfig, InboundConfig, and OutboundConfig for details on the
 // various supported configuration parameters.
-func TransportSpec() config.TransportSpec {
+// The given options apply BEFORE options derived from configuration, so the
+// configuration takes precedence.
+func TransportSpec(opts ...Option) config.TransportSpec {
+	// TODO: Presets. Support "with:" and allow passing those in using
+	// varargs on TransportSpec().
+	var ts transportSpec
+	for _, o := range opts {
+		switch opt := o.(type) {
+		case TransportOption:
+			ts.transportOptions = append(ts.transportOptions, opt)
+		// At present, TChannel inbound and outbound take no options, so no
+		// further types here.
+		default:
+			panic(fmt.Sprintf("unknown option of type %T: %v", o, o))
+		}
+	}
+	return ts.Spec()
+}
+
+// transportSpec holds the configurable parts of the TChannel TransportSpec.
+//
+// These are usually runtime dependencies that cannot be parsed from
+// configuration.
+type transportSpec struct {
+	transportOptions []TransportOption
+}
+
+func (ts *transportSpec) Spec() config.TransportSpec {
 	return config.TransportSpec{
 		Name:               "tchannel",
-		BuildTransport:     buildTransport,
-		BuildInbound:       buildInbound,
-		BuildUnaryOutbound: buildUnaryOutbound,
+		BuildTransport:     ts.buildTransport,
+		BuildInbound:       ts.buildInbound,
+		BuildUnaryOutbound: ts.buildUnaryOutbound,
 	}
 }
 
-func buildTransport(tc *TransportConfig, k *config.Kit) (transport.Transport, error) {
-	var opts []TransportOption
+func (ts *transportSpec) buildTransport(tc *TransportConfig, k *config.Kit) (transport.Transport, error) {
+	var config transportConfig
+	config.tracer = opentracing.GlobalTracer()
+
+	opts := ts.transportOptions
+	for _, opt := range opts {
+		opt(&config)
+	}
+
 	if tc.Address != "" {
-		opts = append(opts, ListenAddr(tc.Address))
+		config.addr = tc.Address
 	}
 	if tc.Service != "" {
-		opts = append(opts, ServiceName(tc.Service))
+		config.name = k.ServiceName()
 	}
-	return NewTransport(opts...)
+
+	// Decide whether to use a channel-backed transport based on whether a
+	// channel instance was provided in TransportSpec options.
+	// Inbound and Outbound constructors must expect either a legacy
+	// *ChannelTransport or the *Transport with peer chooser support.
+	if config.ch != nil {
+		return config.newChannelTransport(), nil
+	}
+	return config.newTransport(), nil
 }
 
-func buildInbound(_ *InboundConfig, t transport.Transport, k *config.Kit) (transport.Inbound, error) {
+func (ts *transportSpec) buildInbound(_ *InboundConfig, t transport.Transport, k *config.Kit) (transport.Inbound, error) {
+	if x, ok := t.(*ChannelTransport); ok {
+		return x.NewInbound(), nil
+	}
 	return t.(*Transport).NewInbound(), nil
 }
 
-func buildUnaryOutbound(oc *OutboundConfig, t transport.Transport, k *config.Kit) (transport.UnaryOutbound, error) {
-	return t.(*Transport).NewSingleOutbound(oc.Address), nil
+func (ts *transportSpec) buildUnaryOutbound(oc *OutboundConfig, t transport.Transport, k *config.Kit) (transport.UnaryOutbound, error) {
+	// ChannelTransport with backing Channel support:
+	if x, ok := t.(*ChannelTransport); ok {
+		p, err := oc.PeerListConfig.Peer()
+		if err != nil {
+			return nil, fmt.Errorf(`unable to configure TChannel outbound with Channel option; TChannel ChannelTransport does not support peer lists: %v`, err)
+		}
+		return x.NewSingleOutbound(p), nil
+	}
+
+	// Transport with PeerChooser support:
+	x := t.(*Transport)
+	chooser, err := oc.PeerListConfig.BuildChooser(x, hostport.Identify, k)
+	if err != nil {
+		return nil, err
+	}
+	return x.NewOutbound(chooser), nil
 }
 
 // TODO: Document configuration parameters

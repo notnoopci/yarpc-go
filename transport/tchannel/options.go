@@ -22,6 +22,13 @@ package tchannel
 
 import "github.com/opentracing/opentracing-go"
 
+// Option allows customizing the YARPC TChannel transport.
+// TransportSpec accepts all options.
+// Any TransportOption is a valid Option.
+type Option interface {
+	tchannelOption()
+}
+
 // transportConfig is suitable for conveying options to TChannel transport
 // constructors.
 // At time of writing, there is only a ChannelTransport constructor, which
@@ -39,6 +46,10 @@ type transportConfig struct {
 
 // TransportOption customizes the behavior of a TChannel Transport.
 type TransportOption func(*transportConfig)
+
+func (TransportOption) tchannelOption() {}
+
+var _ Option = (TransportOption)(nil)
 
 // Tracer specifies the request tracer used for RPCs passing through the
 // TChannel transport.
@@ -77,7 +88,7 @@ func ListenAddr(addr string) TransportOption {
 // ServiceName informs the NewChannelTransport constructor which service
 // name to use if it needs to construct a root Channel object, as when called
 // without the WithChannel option.
-
+//
 // ServiceName specifies the name of the current service for the YARPC-owned
 // TChannel Channel. If the WithChannel option is not specified, the TChannel
 // Transport will build its own TChannel Chanel and use this name for that

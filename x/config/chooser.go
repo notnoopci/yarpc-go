@@ -52,6 +52,22 @@ func (pc PeerListConfig) Empty() bool {
 	return c.Peer == "" && len(c.Etc) == 0
 }
 
+// Peer returns the configured peer or returns an error if there is no peer
+// configured, or if there are extra config attributes.
+// This is a facility for the TChannel ChannelTransport peer configuration
+// specifically since it is unable to make use of any other configuration
+// properties.
+func (pc PeerListConfig) Peer() (string, error) {
+	c := pc.peerListConfig
+	if c.Peer == "" {
+		return "", fmt.Errorf(`missing "peer" config`)
+	}
+	if len(c.Etc) > 0 {
+		return "", fmt.Errorf(`unrecognized attributes: %v`, c.Etc)
+	}
+	return c.Peer, nil
+}
+
 // BuildChooser translates a chooser configuration into a peer chooser, backed
 // by a peer list bound to a peer list binder.
 func (pc PeerListConfig) BuildChooser(transport peer.Transport, identify func(string) peer.Identifier, kit *Kit) (peer.Chooser, error) {
@@ -60,7 +76,6 @@ func (pc PeerListConfig) BuildChooser(transport peer.Transport, identify func(st
 
 	// Special case for single-peer outbounds.
 	if c.Peer != "" {
-
 		if len(c.Etc) > 0 {
 			return nil, fmt.Errorf("unrecognized attributes in peer list config: %+v", c.Etc)
 		}
@@ -126,11 +141,9 @@ func buildPeerListUpdater(c attributeMap, identify func(string) peer.Identifier,
 	}
 
 	if len(peers) > 0 {
-
 		if len(c) > 0 {
 			return nil, fmt.Errorf("unrecognized attributes in peer list config: %+v", c)
 		}
-
 		return peerbind.BindPeers(identifyAll(identify, peers)), nil
 	}
 
