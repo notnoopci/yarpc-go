@@ -40,13 +40,14 @@ func buildFakeTransport(c *FakeTransportConfig, kit *config.Kit) (transport.Tran
 
 // FakeOutboundConfig configures the FakeOutbound.
 type FakeOutboundConfig struct {
-	Nop    string                `config:"nop"`
-	Choose config.PeerListConfig `config:"choose"`
+	config.PeerListConfig
+
+	Nop string `config:"nop"`
 }
 
 func buildFakeOutbound(c *FakeOutboundConfig, t transport.Transport, kit *config.Kit) (transport.UnaryOutbound, error) {
 	x := t.(*FakeTransport)
-	chooser, err := c.Choose.BuildChooser(x, hostport.Identify, kit)
+	chooser, err := c.PeerListConfig.BuildChooser(x, hostport.Identify, kit)
 	if err != nil {
 		return nil, err
 	}

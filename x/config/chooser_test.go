@@ -55,8 +55,7 @@ func TestChooserConfigurator(t *testing.T) {
 						unary:
 							fake-transport:
 								nop: "*.*"
-								choose:
-									peer: 127.0.0.1:8080
+								peer: 127.0.0.1:8080
 			`),
 			test: func(t *testing.T, c yarpc.Config) {
 				outbound, ok := c.Outbounds["their-service"]
@@ -96,11 +95,10 @@ func TestChooserConfigurator(t *testing.T) {
 						unary:
 							fake-transport:
 								nop: "*.*"
-								choose:
-									fake-list:
-										peers:
-											- 127.0.0.1:8080
-											- 127.0.0.1:8081
+								fake-list:
+									peers:
+										- 127.0.0.1:8080
+										- 127.0.0.1:8081
 			`),
 			test: func(t *testing.T, c yarpc.Config) {
 				outbound, ok := c.Outbounds["their-service"]
@@ -146,10 +144,9 @@ func TestChooserConfigurator(t *testing.T) {
 						unary:
 							fake-transport:
 								nop: "*.*"
-								choose:
-									fake-list:
-										fake-updater: fake-news
-										watch: true
+								fake-list:
+									fake-updater: fake-news
+									watch: true
 			`),
 			test: func(t *testing.T, c yarpc.Config) {
 				outbound, ok := c.Outbounds["their-service"]
@@ -191,11 +188,10 @@ func TestChooserConfigurator(t *testing.T) {
 					their-service:
 						unary:
 							fake-transport:
-								choose:
-									round-robin:
-										peers:
-										- 127.0.0.1:8080
-										- 127.0.0.1:8081
+								round-robin:
+									peers:
+									- 127.0.0.1:8080
+									- 127.0.0.1:8081
 			`),
 			test: func(t *testing.T, c yarpc.Config) {
 				outbound := c.Outbounds["their-service"]
@@ -238,9 +234,8 @@ func TestChooserConfigurator(t *testing.T) {
 					their-service:
 						unary:
 							fake-transport:
-								choose:
-									round-robin:
-										fake-updater: fake-news
+								round-robin:
+									fake-updater: fake-news
 			`),
 			test: func(t *testing.T, c yarpc.Config) {
 				outbound := c.Outbounds["their-service"]
@@ -258,9 +253,8 @@ func TestChooserConfigurator(t *testing.T) {
 					their-service:
 						unary:
 							fake-transport:
-								choose:
-									least-pending:
-										fake-updater: fake-news
+								least-pending:
+									fake-updater: fake-news
 			`),
 			test: func(t *testing.T, c yarpc.Config) {
 				outbound := c.Outbounds["their-service"]
@@ -278,9 +272,8 @@ func TestChooserConfigurator(t *testing.T) {
 					their-service:
 						unary:
 							fake-transport:
-								choose:
-									bogus-list:
-										fake-updater: fake-news
+								bogus-list:
+									fake-updater: fake-news
 			`),
 			wantErr: []string{
 				`failed to configure unary outbound for "their-service": `,
@@ -294,9 +287,8 @@ func TestChooserConfigurator(t *testing.T) {
 					their-service:
 						unary:
 							fake-transport:
-								choose:
-									fake-list:
-										bogus-updater: 10
+								fake-list:
+									bogus-updater: 10
 			`),
 			wantErr: []string{
 				`failed to configure unary outbound for "their-service": `,
@@ -310,9 +302,8 @@ func TestChooserConfigurator(t *testing.T) {
 					their-service:
 						unary:
 							fake-transport:
-								choose:
-									peer: a
-									conspicuously: present
+								peer: a
+								conspicuously: present
 			`),
 			wantErr: []string{
 				`failed to configure unary outbound for "their-service": `,
@@ -328,12 +319,11 @@ func TestChooserConfigurator(t *testing.T) {
 					their-service:
 						unary:
 							fake-transport:
-								choose:
-									fake-list:
-										peers:
-											- 127.0.0.1:8080
-											- 127.0.0.1:8081
-										conspicuously: present
+								fake-list:
+									peers:
+										- 127.0.0.1:8080
+										- 127.0.0.1:8081
+									conspicuously: present
 			`),
 			wantErr: []string{
 				`failed to configure unary outbound for "their-service": `,
@@ -349,11 +339,10 @@ func TestChooserConfigurator(t *testing.T) {
 					their-service:
 						unary:
 							fake-transport:
-								choose:
-									fake-list:
-										fake-updater: fake-news
-										watch: true
-										conspicuously: present
+								fake-list:
+									fake-updater: fake-news
+									watch: true
+									conspicuously: present
 			`),
 			wantErr: []string{
 				`failed to configure unary outbound for "their-service": `,
