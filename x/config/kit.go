@@ -20,7 +20,10 @@
 
 package config
 
-import "reflect"
+import (
+	"reflect"
+	"sort"
+)
 
 // Kit carries internal dependencies for building peer lists.
 // The kit gets threaded through transport, outbound, and inbound builders
@@ -42,6 +45,22 @@ func (k *Kit) peerListSpec(name string) *compiledPeerListSpec {
 	return k.c.knownPeerLists[name]
 }
 
+func (k *Kit) peerListSpecNames() (names []string) {
+	for name := range k.c.knownPeerLists {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return
+}
+
 func (k *Kit) peerListUpdaterSpec(name string) *compiledPeerListUpdaterSpec {
 	return k.c.knownPeerListUpdaters[name]
+}
+
+func (k *Kit) peerListUpdaterSpecNames() (names []string) {
+	for name := range k.c.knownPeerListUpdaters {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return
 }

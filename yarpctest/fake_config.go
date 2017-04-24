@@ -31,17 +31,17 @@ import (
 
 // FakeTransportConfig configures the FakeTransport.
 type FakeTransportConfig struct {
-	Address string `config:"address"`
+	Nop string `config:"nop"`
 }
 
 func buildFakeTransport(c *FakeTransportConfig, kit *config.Kit) (transport.Transport, error) {
-	return NewFakeTransport(FakeTransportAddress(c.Address)), nil
+	return NewFakeTransport(NopTransportOption(c.Nop)), nil
 }
 
 // FakeOutboundConfig configures the FakeOutbound.
 type FakeOutboundConfig struct {
-	Pattern string                `config:"pattern"`
-	Choose  config.PeerListConfig `config:"choose"`
+	Nop    string                `config:"nop"`
+	Choose config.PeerListConfig `config:"choose"`
 }
 
 func buildFakeOutbound(c *FakeOutboundConfig, t transport.Transport, kit *config.Kit) (transport.UnaryOutbound, error) {
@@ -50,7 +50,7 @@ func buildFakeOutbound(c *FakeOutboundConfig, t transport.Transport, kit *config
 	if err != nil {
 		return nil, err
 	}
-	return x.NewOutbound(chooser, Pattern(c.Pattern)), nil
+	return x.NewOutbound(chooser, NopOutboundOption(c.Nop)), nil
 }
 
 // FakeTransportSpec returns a configurator spec for the fake-transport
