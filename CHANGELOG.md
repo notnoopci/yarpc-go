@@ -21,6 +21,8 @@ v1.8.0 (unreleased)
     public.
 -   `peer.BindPeers` returns a `*peer.PeersUpdater`.  The `PeersUpdater` type
     is now public.
+-   http: Added an `AddHeader` option to HTTP outbounds to send certain headers
+    for all requests.
 
 
 v1.7.1 (2017-03-29)
